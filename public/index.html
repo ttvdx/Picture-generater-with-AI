@@ -1,0 +1,172 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Realistic AI Studio</title>
+
+<style>
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    padding: 30px;
+    background: #10101c;
+    color: white;
+    font-family: Arial, sans-serif;
+}
+
+.container {
+    max-width: 850px;
+    margin: auto;
+}
+
+h1 {
+    text-align: center;
+    color: #a78bfa;
+}
+
+.panel {
+    background: #1b1b2b;
+    padding: 24px;
+    border-radius: 16px;
+    border: 1px solid #6941a5;
+}
+
+textarea, select {
+    width: 100%;
+    padding: 14px;
+    margin: 10px 0;
+    border-radius: 9px;
+    border: 1px solid #555;
+    background: #10101c;
+    color: white;
+}
+
+button {
+    padding: 14px;
+    width: 100%;
+    border: 0;
+    border-radius: 9px;
+    background: #8053d9;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+button:disabled {
+    opacity: .5;
+    cursor: wait;
+}
+
+#result {
+    display: block;
+    max-width: 100%;
+    margin: 20px auto;
+    border-radius: 12px;
+}
+
+#status {
+    text-align: center;
+    color: #c4b5fd;
+    margin: 18px;
+}
+
+a { color: #c4b5fd; }
+</style>
+</head>
+
+<body>
+<div class="container">
+    <h1>REALISTIC AI STUDIO</h1>
+
+    <div class="panel">
+        <h3>Describe your picture</h3>
+
+        <textarea id="prompt" rows="4"
+        placeholder="A realistic photograph of a mountain cabin at sunset..."></textarea>
+
+        <label>Image size</label>
+        <select id="size">
+            <option value="512">512 × 512 - Fast</option>
+            <option value="768">768 × 768 - Medium</option>
+            <option value="1024">1024 × 1024 - Large</option>
+        </select>
+
+        <button id="generate" onclick="generateImage()">
+            GENERATE IMAGE
+        </button>
+
+        <p id="status">Ready to create.</p>
+
+        <img id="result" hidden>
+
+        <a id="download" hidden download="generated-image.jpg">
+            Download image
+        </a>
+    </div>
+</div>
+
+<script>
+let currentImage = null;
+
+async function generateImage() {
+    const prompt = document.getElementById("prompt").value.trim();
+    const size = Number(document.getElementById("size").value);
+    const button = document.getElementById("generate");
+    const status = document.getElementById("status");
+    const result = document.getElementById("result");
+    const download = document.getElementById("download");
+
+    if (!prompt) {
+        status.textContent = "Please enter a description.";
+        return;
+    }
+
+    button.disabled = true;
+    button.textContent = "GENERATING...";
+    status.textContent = "Creating your image with Flux Schnell...";
+    result.hidden = true;
+    download.hidden = true;
+
+    try {
+        const response = await fetch("/api/generate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                prompt,
+                width: size,
+                height: size
+            })
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || "Generation failed.");
+        }
+
+        const blob = await response.blob();
+
+        if (currentImage) URL.revokeObjectURL(currentImage);
+
+        currentImage = URL.createObjectURL(blob);
+
+        result.src = currentImage;
+        result.hidden = false;
+
+        download.href = currentImage;
+        download.hidden = false;
+
+        status.textContent = "Your image is ready!";
+
+    } catch (error) {
+        status.textContent = "Error: " + error.message;
+    } finally {
+        button.disabled = false;
+        button.textContent = "GENERATE IMAGE";
+    }
+}
+</script>
+</body>
+</html>
